@@ -84,6 +84,11 @@ var script = document.createElement('script')
 script.setAttribute('type','text/javascript')
 script.setAttribute('src','https://code.jquery.com/jquery-2.0.3.min.js')
 script.async = false
-script.onload = script.onreadystatechange = jQueryLoaded
+script.onload = jQueryLoaded
+script.onreadystatechange = function () {
+   if (this.readyState == 'complete') {
+     jQueryLoaded()
+   }
+}
 var head = document.getElementsByTagName('head').item(0)
 head.insertBefore(script, head.firstChild)
