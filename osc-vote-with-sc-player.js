@@ -61,7 +61,7 @@ var jQueryLoaded = function() {
 							if(matches) return
 							var usr = this
 							if(usr.kind != 'user') return
-							if(usr.username == songArtist || usr.full_name.toLowerCase() == songArtist) {
+							if(usr.username.toLowerCase() == songArtist || usr.full_name.toLowerCase() == songArtist) {
 								$.json(sc('users/'+usr.id+'/tracks'), function(tracks) {
 									$.each(tracks, function() {
 										if(matches) return
