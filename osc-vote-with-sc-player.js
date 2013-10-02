@@ -18,66 +18,132 @@ var jQueryLoaded = function() {
 			success: success
 		})
 	}
-
+	
+	var repl = /[^a-zA-Z0-9]/g // /\s|\*|\-|\"|\:/g
+	
+	var tracks1
+	var tracks2
+	
 	$.json(sc('resolve.json?url=http://soundcloud.com/groups/kvr-one-synth-challenge'), function(data) {
 		var gid = data.id
-		var repl = /[^a-zA-Z0-9]/g // /\s|\*|\-|\"|\:/g
 		$.json(sc('groups/'+gid+'/tracks'), function(tracks) {
-			$('.ss-q-title').each(function() {
-				var $this = $(this)
-				var title = $this.text().toLowerCase()
-				var songNameMatch = removeAccents(title.replace(/[\s\S]*\s-\s/,'')).replace(repl,'')
-				var songArtist = removeAccents(title.replace(/\s-\s[\s\S]*/,'')).replace(/^\s([\s\S]*)\s$/,'$1')
-				title = removeAccents(title).replace(repl,'')
-				
-				var matches = false
-				var appendMatch = function(track) {
-					matches = true
-					$this.append(
-					'<iframe width="100%" height="166" scrolling="no" frameborder="no" '
-					+'src="https://w.soundcloud.com/player/?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F'+track.id+'"></iframe>'
-					)
-					.parents('.ss-form-entry:first').append('<br/><br/>')
+			tracks1 = tracks
+			resolveTracks()
+		})
+	})
+
+	$.json(sc('resolve.json?url=http://soundcloud.com/groups/kvr-one-synth-challenge-1'), function(data) {
+		var gid = data.id
+		$.json(sc('groups/'+gid+'/tracks'), function(tracks) {
+			tracks2 = tracks
+			resolveTracks()
+		})
+	})
+	
+	var resolveTracks = function() {
+		if(!tracks1 || !tracks2) return
+		
+		var songTitle = function(title) {
+			return removeAccents(title.toLowerCase().replace(/[\s\S]*\s-\s/,'')).replace(repl,'')
+		}
+		
+		var artistName = function(title) {
+			return removeAccents(title.toLowerCase().replace(/\s-\s[\s\S]*/,'')).replace(repl, '')///^\s([\s\S]*)\s$/,'$1')
+		}
+		
+		var trackMatches = function(songOnForm, track) {
+			return ((songTitle(track.title) == songOnForm.title)
+					&& (artistName(track.user.permalink) == songOnForm.artist ||
+						artistName(track.user.username) == songOnForm.artist))
+		}
+		
+		var songsOnForm = new Array()
+		
+		$('.ss-q-title').each(function() {
+			var $this = $(this)
+			var title = $this.text()
+			
+			if(/Voter Name.*/.test(title)) {
+				return
+			}
+			
+			songsOnForm.push({
+				element: $this,
+				artist: artistName(title),
+				title: songTitle(title)
+			})
+		})
+		
+		// match at least one track from one group to find the right one
+		var tracks
+		$.each(songsOnForm, function() {
+			if(tracks) return
+			var songOnForm = this
+			$.each(tracks1, function() {
+				var track = this
+				if(trackMatches(songOnForm, track)) {
+					tracks = tracks1
 				}
-				
-				var appendTrackIfMatch = function(track) {
-					var trackTitle = removeAccents(track.title.toLowerCase()).replace(repl,'')
-					var trackPermalink = removeAccents(track.permalink.toLowerCase()).replace(repl,'')
-					if(trackTitle == title || title == trackPermalink || songNameMatch == trackTitle) {
-						appendMatch(track)
-					}
-				}
-				
-				$.each(tracks, function() {
-					if(matches) return
-					var track = this
-					appendTrackIfMatch(track)
-				})
-				
-				if(!matches) {
-					console.log('Searching for: ' + songArtist)
-					$.json(sc('users?q=' + songArtist), function(users) {
-						$.each(users, function() {
-							if(matches) return
-							var usr = this
-							if(usr.kind != 'user') return
-							if(usr.username.toLowerCase() == songArtist || usr.full_name.toLowerCase() == songArtist) {
-								$.json(sc('users/'+usr.id+'/tracks'), function(tracks) {
-									$.each(tracks, function() {
-										if(matches) return
-										var track = this
-										console.log('Got track:')
-										console.log(track)
-										appendTrackIfMatch(track)
-									})
-								})
-							}
-						})
-					})
+			})
+			$.each(tracks2, function() {
+				var track = this
+				if(trackMatches(songOnForm, track)) {
+					tracks = tracks2
 				}
 			})
 		})
-	})
+		
+		$.each(songsOnForm, function() {
+			var $this = this.element
+			var songOnForm = this
+			
+			var matches = false
+			var appendMatch = function(track) {
+				matches = true
+				$this.append(
+				'<iframe width="100%" height="166" scrolling="no" frameborder="no" '
+				+'src="https://w.soundcloud.com/player/?url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F'+track.id+'"></iframe>'
+				)
+				.parents('.ss-form-entry:first').append('<br/><br/>')
+			}
+			
+			var appendTrackIfMatch = function(track) {
+				if(artistName(track.title) == songOnForm.artist || artistName(track.user.username) == songOnForm.artist || artistName(track.user.permalink) == songOnForm.artist) {
+					appendMatch(track)
+				}
+			}
+			
+			$.each(tracks, function() {
+				if(matches) return
+				var track = this
+				appendTrackIfMatch(track)
+			})
+			
+			if(!matches) {
+				console.log('Unable to find match for track: ' + this.artist + ' // ' + this.title)
+				/*
+				$.json(sc('users?q=' + encodeURIComponent(songArtist.replace(/&amp;/g, "&"))), function(users) {
+					$.each(users, function() {
+						if(matches) return
+						var usr = this
+						if(usr.kind != 'user') return
+						if(usr.username.toLowerCase() == songArtist || usr.full_name.toLowerCase() == songArtist) {
+							$.json(sc('users/'+usr.id+'/tracks'), function(tracks) {
+								$.each(tracks, function() {
+									if(matches) return
+									var track = this
+									console.log('Got track:')
+									console.log(track)
+									appendTrackIfMatch(track)
+								})
+							})
+						}
+					})
+				})
+				*/
+			}
+		})
+	}
 }
 
 var script = document.createElement('script')
