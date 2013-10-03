@@ -3,9 +3,11 @@ One Synth Challenge Voting Script
 
 This small bookmarklet will add SoundCloud tracks directly in the OSC voting form, in the appropriate locations. This makes it easy to click to play a track then click to vote for it.
 
-**Note: due to a limitation on GitHub, the bookmarklet links do not work on this page.**
+&nbsp;
 
+**Note: due to a limitation on GitHub, the bookmarklet links do not work on this page.**
 **Please follow the instructions here: http://zantow.us/#/Projects/OSCVotingWithTracks**
+&nbsp;
 
 Usage
 -----
